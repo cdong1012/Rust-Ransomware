@@ -40,4 +40,54 @@
         ![alt text](https://github.com/cdong1012/Rust-Ransomware/blob/master/image/IsDebuggerPresent.JPG "IsDebuggerPresent")
 
     - If you trace down the type of the returned variable (*BOOL*), you will find that *BOOL* is just a wrapper for *i32* in Rust!
-    - At this point, let's try it out!
+    - At this point, we're ready to try it out in main.rs!
+
+    - First, since *IsDebuggerPresent* is from the winapi::um::debugapi crate, we need to import it in **Cargo.toml**.
+
+    ```
+        winapi = { version = "0.3", features = ["debugapi"}
+
+    ```
+
+    - After that, we can lay it out in **main.rs**:
+
+    ``` Rust
+
+        #[cfg(windows)]
+        extern crate winapi;
+
+        use winapi::um::debugapi::IsDebuggerPresent;
+
+        fn main() {
+            unsafe {
+                match IsDebuggerPresent() {
+                    0 => {
+                        println!("Debugger is not present... Continue");
+                    },
+                    _ => {
+                        println!("Debugger is present... Terminating. Code {}", IsDebuggerPresent());
+                        std::process::exit(0);
+                    }
+                }
+            }
+
+            println!("Hello, world!");
+            loop {}
+        }
+
+
+    ```
+
+    - First, we check if IsDebuggerPresent() returns a 0 or any other number. If it's 0, the program is not being debugged, so we continue to print "Hello, world!"
+    - If it's being debugged, we print the debug code out and call std::process::exit(0) to exit immediately!
+    - Here is the result
+        1. Double clicking on the executable /target/debug/Rust-Ransomware.exe. As you can see, the program prints out "Hello, world!"
+
+        ![alt text](https://github.com/cdong1012/Rust-Ransomware/blob/master/image/noDebugger.JPG "No debugger")
+
+        1. Debugging this executable in IDA, we can set a break point where we compare eax(the return value from IsDebuggerPresent()). If we execute to this point, you can see that eax = 1, so we will exit immediately!
+
+        ![alt text](https://github.com/cdong1012/Rust-Ransomware/blob/master/image/debuggerIDA.JPG "Debugger")
+
+        ![alt text](https://github.com/cdong1012/Rust-Ransomware/blob/master/image/debuggerIDA2.JPG "Debugger")
+

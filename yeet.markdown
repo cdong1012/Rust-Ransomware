@@ -2,18 +2,17 @@
 # Rust Ransomware: Part 1
 # Setting up & Anti Rerverse Engineering technique in malwares
 
-1. Set up
+### 1. Set up
     - To set up this lab, please make sure you have a recent version of [Rust](https://www.rust-lang.org/tools/install "Rust Installation") installed.
     - Create a folder on your computer and change into that directory from your Command Prompt
 
     ```
         cd folder
         cargo init
-
     ```
 
     - You should see a few files and folders created like below
-        ![alt text](https://ibb.co/1Tvj5zc "Cargo init")
+        ![alt text](https://github.com/cdong1012/Rust-Ransomware/blob/master/image/Cargoinit.JPG "Cargo init")
 
         ⋅⋅* The **src** folder is where you should put your Rust codes in for the malware.
         ⋅⋅* The **target** folder is where you can find the products of your code after building it (The .exe file for the malware,...)
@@ -28,10 +27,17 @@
 
     ```
         
-2. IsDebuggerPresent
-    - IsDebuggerPresent is a cool WinAPI function used to check for the BeingDebugged flag in the PEB (Process Environment Block) 
-        and will return a non-zero value if it is indeed being debug.
-    - In theory, if this functions returns a non-zero value, the malware should exit immediately instead of executing its behavior to prevent reverse engineers from 
-    being able to run it with a debugger attached
+### 2. Anti Reverse Engineering techniques
+    1. **IsDebuggerPresent**
+        - IsDebuggerPresent is a cool WinAPI function used to check for the BeingDebugged flag in the PEB (Process Environment Block) 
+            and will return a non-zero value if it is indeed being debug.
+        
+        - In theory, if this functions returns a non-zero value, the malware should exit immediately instead of executing its behavior to prevent reverse engineers from being able to run it with a debugger attached
 
-    - 
+        - You can read more about the documentation [here](https://docs.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-isdebuggerpresent "IsDebuggerPresent")
+        
+        - This is what the documentation from Rust Winapi looks like
+            ![alt text](https://github.com/cdong1012/Rust-Ransomware/blob/master/image/IsDebuggerPresent.JPG "IsDebuggerPresent")
+
+        - If you trace down the type of the returned variable (*BOOL*), you will find that *BOOL* is just a wrapper for *i32* in Rust!
+        - At this point, let's try it out!

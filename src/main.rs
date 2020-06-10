@@ -1,21 +1,10 @@
 #[cfg(windows)]
 extern crate winapi;
 
-use winapi::um::debugapi::IsDebuggerPresent;
+mod lib;
 
 fn main() {
-    unsafe {
-        match IsDebuggerPresent() {
-            0 => {
-                println!("Debugger is not present... Continue");
-            },
-            _ => {
-                println!("Debugger is present... Terminating. Code {}", IsDebuggerPresent());
-                std::process::exit(0);
-            }
-        }
-    }
-
-    println!("Hello, world!");
-    loop {}
+    use lib::check_process;
+    check_process();
+    println!("Fuck");
 }

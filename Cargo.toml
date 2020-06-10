@@ -9,5 +9,5 @@ edition = "2018"
 [dependencies]
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3", features = ["debugapi"}
+winapi = { version = "0.3", features = ["handleapi", "minwindef", "winnt", "processthreadsapi", "debugapi", "sysinfoapi", "winuser", "minwinbase", "synchapi", "windef", "psapi"]}
 widestring = "*"

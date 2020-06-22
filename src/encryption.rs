@@ -3,21 +3,19 @@ extern crate winapi;
 
 use std::ffi::CString;
 use std::ptr::null_mut;
-use winapi::shared::winerror::NTE_NO_KEY;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::fileapi::{CreateFileA, ReadFile, WriteFile, OPEN_ALWAYS, OPEN_EXISTING};
-use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
+use winapi::um::handleapi::CloseHandle;
 use winapi::um::wincrypt::{
     CryptAcquireContextA, CryptDecrypt, CryptDestroyKey, CryptEncrypt, CryptExportKey, CryptGenKey,
-    CryptGetUserKey, CryptImportKey, CryptReleaseContext, AT_KEYEXCHANGE, CALG_AES_192,
-    CRYPT_EXPORTABLE, CRYPT_VERIFYCONTEXT, HCRYPTKEY, HCRYPTPROV, PLAINTEXTKEYBLOB, PROV_RSA_AES,
-    SIMPLEBLOB,
+    CryptImportKey, CryptReleaseContext, CALG_AES_192, CRYPT_EXPORTABLE, CRYPT_VERIFYCONTEXT,
+    HCRYPTKEY, HCRYPTPROV, PLAINTEXTKEYBLOB, PROV_RSA_AES,
 };
 use winapi::um::winnt::{
     FILE_ATTRIBUTE_NORMAL, FILE_READ_DATA, FILE_SHARE_READ, FILE_WRITE_DATA, HANDLE,
 };
 
-static blob_buffer: [u8; 36] = [
+static BLOB_BUFFER: [u8; 36] = [
     8, 2, 0, 0, 15, 102, 0, 0, 24, 0, 0, 0, 8, 68, 217, 142, 222, 209, 85, 216, 44, 88, 2, 170,
     248, 210, 84, 119, 53, 196, 64, 96, 252, 205, 231, 229,
 ];
@@ -25,7 +23,6 @@ static blob_buffer: [u8; 36] = [
 pub fn encrypt(source_file: CString, dest_file: CString) -> bool {
     let mut h_key: HCRYPTKEY = 0usize; // key
     let mut h_crypt_prov: HCRYPTPROV = 0usize;
-    let KEYLENGTH = 0x00C00000; // upper 16 bits = 192 bits
 
     unsafe {
         // acquiring a cryptographic provider
@@ -49,8 +46,8 @@ pub fn encrypt(source_file: CString, dest_file: CString) -> bool {
         // import AES key
         if CryptImportKey(
             h_crypt_prov,
-            blob_buffer.as_ptr(),
-            blob_buffer.len() as u32,
+            BLOB_BUFFER.as_ptr(),
+            BLOB_BUFFER.len() as u32,
             0,
             0,
             &mut h_key,
@@ -65,8 +62,8 @@ pub fn encrypt(source_file: CString, dest_file: CString) -> bool {
         //---------------------------------------------------------------
         // Determine the number of bytes to encrypt at a time.
         // This must be a multiple of 192 since we're doing AES-192.
-        let mut block_len: u32 = 960;
-        let mut buffer_len: u32 = 960;
+        let block_len: u32 = 960;
+        let buffer_len: u32 = 960;
 
         //---------------------------------------------------------------
         // Allocate memory.
@@ -85,7 +82,7 @@ pub fn encrypt(source_file: CString, dest_file: CString) -> bool {
             null_mut(),
         );
 
-        let mut dest_handle: HANDLE = CreateFileA(
+        let dest_handle: HANDLE = CreateFileA(
             dest_file.as_ptr(),
             FILE_WRITE_DATA,
             FILE_SHARE_READ,
@@ -95,10 +92,10 @@ pub fn encrypt(source_file: CString, dest_file: CString) -> bool {
             null_mut(),
         );
 
-        let mut EOF = 0;
+        let mut eof = 0;
         let mut count = 0;
 
-        while EOF == 0 {
+        while eof == 0 {
             if ReadFile(
                 source_handle,
                 pb_buffer.as_ptr() as *mut _,
@@ -111,13 +108,13 @@ pub fn encrypt(source_file: CString, dest_file: CString) -> bool {
                 break;
             }
             if count < block_len {
-                EOF = 1;
+                eof = 1;
             }
 
             if CryptEncrypt(
                 h_key,
                 0,
-                EOF,
+                eof,
                 0,
                 pb_buffer.as_ptr() as *mut u8,
                 &mut count,
@@ -151,8 +148,6 @@ pub fn encrypt(source_file: CString, dest_file: CString) -> bool {
 pub fn decrypt(source_file: CString, dest_file: CString) -> bool {
     let mut h_key: HCRYPTKEY = 0usize; // key
     let mut h_crypt_prov: HCRYPTPROV = 0usize;
-    let KEYLENGTH = 0x00C00000; // upper 16 bits = 192 bits
-
     unsafe {
         if CryptAcquireContextA(
             &mut h_crypt_prov,
@@ -171,8 +166,8 @@ pub fn decrypt(source_file: CString, dest_file: CString) -> bool {
 
         if CryptImportKey(
             h_crypt_prov,
-            blob_buffer.as_ptr(),
-            blob_buffer.len() as u32,
+            BLOB_BUFFER.as_ptr(),
+            BLOB_BUFFER.len() as u32,
             0,
             0,
             &mut h_key,
@@ -194,7 +189,7 @@ pub fn decrypt(source_file: CString, dest_file: CString) -> bool {
             null_mut(),
         );
 
-        let mut dest_handle: HANDLE = CreateFileA(
+        let dest_handle: HANDLE = CreateFileA(
             dest_file.as_ptr(),
             FILE_WRITE_DATA,
             FILE_SHARE_READ,
@@ -204,8 +199,8 @@ pub fn decrypt(source_file: CString, dest_file: CString) -> bool {
             null_mut(),
         );
 
-        let mut block_len: u32 = 960;
-        let mut buffer_len: u32 = 960;
+        let block_len: u32 = 960;
+        let buffer_len: u32 = 960;
 
         let mut EOF = 0;
         let mut count = 0;
@@ -258,7 +253,7 @@ pub fn decrypt(source_file: CString, dest_file: CString) -> bool {
 pub fn generate_key() -> Vec<u8> {
     let mut h_key: HCRYPTKEY = 0usize; // key
     let mut h_crypt_prov: HCRYPTPROV = 0usize;
-    let KEYLENGTH = 0x00C00000; // upper 16 bits = 192 bits
+    let key_length = 0x00C00000; // upper 16 bits = 192 bits
 
     let mut blob_buff: Vec<u8> = Vec::new();
 
@@ -281,10 +276,10 @@ pub fn generate_key() -> Vec<u8> {
         }
 
         if CryptGenKey(
-            h_crypt_prov,                 // hProv, handle to key container
-            CALG_AES_192,                 // Algid, algorithm ID
-            KEYLENGTH | CRYPT_EXPORTABLE, // dwFlags, specifies the type of key generated
-            &mut h_key,                   // phKey, mutable pointer to our key
+            h_crypt_prov,                  // hProv, handle to key container
+            CALG_AES_192,                  // Algid, algorithm ID
+            key_length | CRYPT_EXPORTABLE, // dwFlags, specifies the type of key generated
+            &mut h_key,                    // phKey, mutable pointer to our key
         ) == 0
         {
             println!("Error while generating key");

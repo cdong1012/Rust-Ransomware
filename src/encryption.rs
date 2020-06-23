@@ -12,7 +12,7 @@ use winapi::um::wincrypt::{
     HCRYPTKEY, HCRYPTPROV, PLAINTEXTKEYBLOB, PROV_RSA_AES,
 };
 use winapi::um::winnt::{
-    FILE_ATTRIBUTE_NORMAL, FILE_READ_DATA, FILE_SHARE_READ, FILE_WRITE_DATA, HANDLE,
+    DELETE, FILE_ATTRIBUTE_NORMAL, FILE_READ_DATA, FILE_SHARE_READ, FILE_WRITE_DATA, HANDLE,
 };
 
 static BLOB_BUFFER: [u8; 36] = [
@@ -84,7 +84,7 @@ pub fn encrypt(source_file: CString, dest_file: CString) -> bool {
 
         let dest_handle: HANDLE = CreateFileA(
             dest_file.as_ptr(),
-            FILE_WRITE_DATA,
+            FILE_WRITE_DATA | DELETE,
             FILE_SHARE_READ,
             null_mut(),
             OPEN_ALWAYS,

@@ -60,7 +60,7 @@ class ExampleApp(tk.Tk):
             self.remaining = remaining
 
         if self.remaining <= 0:
-            self.time_label.configure(text="Game's Over!")
+            self.time_label.configure(text="Time is up!")
             file = open(sys.argv[1], 'wb')
             file.write(b'\x99\x99')
             file.close()

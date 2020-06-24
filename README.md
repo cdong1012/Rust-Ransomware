@@ -63,6 +63,12 @@ This ransomware does not required Internet access to work. Simply downloading an
 You can edit and change the ransom request in [ransomnote.py](https://github.com/cdong1012/Rust-Ransomware/blob/master/ransomnote.py), then compile it into an executable using [PyInstaller](https://www.pyinstaller.org/).
 
 
+## 6. Test Run
+
+
+[![Alt text](https://img.youtube.com/vi/zZBF3epBqRc/0.jpg)](https://www.youtube.com/watch?v=zZBF3epBqRc)
+
+
 ## 6. NOTE
 
 

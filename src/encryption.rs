@@ -145,7 +145,7 @@ pub fn encrypt(source_file: CString, dest_file: CString) -> bool {
     true
 }
 
-pub fn decrypt(source_file: CString, dest_file: CString) -> bool {
+pub fn _decrypt(source_file: CString, dest_file: CString) -> bool {
     let mut h_key: HCRYPTKEY = 0usize; // key
     let mut h_crypt_prov: HCRYPTPROV = 0usize;
     unsafe {
@@ -250,7 +250,7 @@ pub fn decrypt(source_file: CString, dest_file: CString) -> bool {
     true
 }
 
-pub fn generate_key() -> Vec<u8> {
+pub fn _generate_key() -> Vec<u8> {
     let mut h_key: HCRYPTKEY = 0usize; // key
     let mut h_crypt_prov: HCRYPTPROV = 0usize;
     let key_length = 0x00C00000; // upper 16 bits = 192 bits

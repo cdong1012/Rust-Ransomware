@@ -21,10 +21,10 @@ First, it checks for admin priviledges, and if the process does not have admin r
 Second, after gaining admin priviledges, it will add itself to the registry ***Software\Microsoft\Windows\CurrentVersion\Run*** to maintain persistence after the machine reboots. Since this malware is ran every time the machine reboots, we need the file check above to know if we need to encrypt files or not.
 
 
-Third, after adding itself to the registry, it will traverse and encrypt all personal files on the user's system and display the ransomnote. After encrypting, it will write the date into **encrypt_date.txt**.
+Third, after adding itself to the registry, it will traverse and encrypt all personal files on the user's system and display the ransomnote. After encrypting, it will write the date into **encrypt_date.txt**. The files encrypted will have an extension of **.peter** at the end.
 
 
-If the machine is already encrypted, it will just display the ransomnote. The ransomnote will display the countdown 1 month from the time in  **encrypt_date.txt**. Once the countdown is done, it will write *\x99\x99* into the file and restart the computer.
+If the machine reboots and is already encrypted, it will just display the ransomnote. The ransomnote will display the countdown 1 month from the time in  **encrypt_date.txt**. Once the countdown is done, it will write *\x99\x99* into the file and restart the computer.
 
 
 Whenever the **encrypt_date.txt** is read and the bytes returned are *\x99\x99*, all the files will be deleted.
